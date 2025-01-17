@@ -4,6 +4,7 @@ import React, {
   useEffect,
   useContext,
   ReactNode,
+  useRef,
 } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
@@ -222,17 +223,20 @@ export const TransactionProvider: React.FC<TransactionProviderProps> = ({
     serverTransactions: Transaction[]
   ): Promise<void> => {
     try {
-      // Create a map for quick lookup
+      /**
+       * Create a map for quick lookup
+       */
       const localTransactionsMap = new Map<string, Transaction>();
       transactions.forEach((tx) => localTransactionsMap.set(tx.id, tx));
 
-      // Merge server transactions
+      /**
+       *  Merge server transactions
+       */
       const mergedTransactions: Transaction[] = [...transactions];
       serverTransactions.forEach((serverTx) => {
         if (!localTransactionsMap.has(serverTx.id)) {
           mergedTransactions.push({ ...serverTx, synced: true }); // Assume server transactions are synced
         }
-        // If transaction exists locally, you might want to handle updates or conflicts here
       });
 
       setTransactions(mergedTransactions);
@@ -282,7 +286,9 @@ export const TransactionProvider: React.FC<TransactionProviderProps> = ({
         text2: `Uploading ${unsyncedTransactions.length} transactions...`,
       });
 
-      // Retry logic parameters
+      /**
+       * Retry logic parameters
+       */
       const MAX_RETRIES = 5;
       let attempt = 0;
       let success = false;
