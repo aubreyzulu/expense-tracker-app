@@ -1,14 +1,50 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { Text, Card, useTheme, Button } from 'react-native-paper';
 import { useTransactions } from '../context/TransactionContext';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInUp } from 'react-native-reanimated';
+import Toast from 'react-native-toast-message';
+import notificationService, {
+  NotificationPayload,
+} from '../utils/notification';
 import { router } from 'expo-router';
 
 export default function HomeScreen(): JSX.Element {
   const { transactions } = useTransactions();
   const theme = useTheme();
+
+  useEffect(() => {
+    const handleNotification = (payload: NotificationPayload) => {
+      switch (payload.type) {
+        case 'sync-success':
+          Toast.show({
+            type: 'success',
+            text1: 'Sync Completed',
+            text2: payload.message,
+          });
+          break;
+        case 'sync-failure':
+          Toast.show({
+            type: 'error',
+            text1: 'Sync Failed',
+            text2: payload.message,
+          });
+          break;
+        case 'sync-progress':
+          // Optionally handle progress notifications
+          break;
+        default:
+          break;
+      }
+    };
+
+    notificationService.on('notify', handleNotification);
+
+    return () => {
+      notificationService.off('notify', handleNotification);
+    };
+  }, []);
 
   const totalIncome = transactions
     .filter((t) => t.type === 'income')
