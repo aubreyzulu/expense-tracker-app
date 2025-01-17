@@ -1,51 +1,31 @@
-# Welcome to your Expo app 👋
+# Offline Expense Tracker
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+## Overview
 
-## Get started
+The **Offline Expense Tracker** is a mobile application that enables users to track their income and expenses effortlessly, even without an internet connection. It provides comprehensive features like categorization, transaction history, charts, and offline data synchronization.
 
-1. Install dependencies
+---
 
-   ```bash
-   npm install
-   ```
+## Requirements
 
-2. Start the app
+### Functional Requirements
 
-   ```bash
-    npx expo start
-   ```
+- **Add Transactions**: Users can log income or expense transactions.
+- **Categorize Transactions**: Organize transactions into categories (e.g., Food, Rent, Travel).
+- **View Transaction History**: Display past transactions with detailed information.
+- **Graphs and Charts**: Visualize financial trends using:
+  - **Pie charts** for expense breakdown.
+  - **Bar graphs** for income vs. expenses over time.
+  - **Line charts** for tracking monthly expenses.
+- **Search and Filter**: Search and filter transactions by date, category, or amount.
+- **Offline Access**: All features available offline.
+- **Data Sync**: Sync transactions with a remote server when online.
+- **Notifications**: Alerts for successful or failed sync operations.
 
-In the output, you'll find options to open the app in a
+### Non-Functional Requirements
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
-
-## Learn more
-
-To learn more about developing your project with Expo, look at the following resources:
-
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
-# expense-tracker-app
+- **Performance**: Ensure quick access to local data, even for large datasets.
+- **Data Security**: Encrypt sensitive data stored locally.
+- **Scalability**: Support increasing numbers of transactions.
+- **Cross-Platform**: Seamless operation on both iOS and Android.
+- **User-Friendly Interface**: Simplified UI for adding, editing, and visualizing transactions.
