@@ -47,3 +47,5 @@ The **Offline Expense Tracker** is a mobile application that enables users to tr
 ## Analytics
 
 <img src="assets/images/analytics.png" alt="Analytics" width="300" />
+
+<img src="assets/images/analytics2.png" alt="Analytics" width="300" />
