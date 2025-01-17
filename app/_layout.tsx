@@ -3,6 +3,7 @@ import { Tabs } from 'expo-router';
 import { PaperProvider, MD3LightTheme } from 'react-native-paper';
 import { Ionicons } from '@expo/vector-icons';
 import { TransactionProvider } from '../context/TransactionContext';
+import Toast from 'react-native-toast-message';
 
 const theme = {
   ...MD3LightTheme,
@@ -69,6 +70,7 @@ export default function AppLayout() {
             }}
           />
         </Tabs>
+        <Toast />
       </TransactionProvider>
     </PaperProvider>
   );

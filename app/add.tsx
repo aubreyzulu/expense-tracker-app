@@ -31,6 +31,7 @@ export default function AddTransactionScreen(): JSX.Element {
         type,
         date: new Date().toISOString(),
         notes,
+        synced: false,
       };
       addTransaction(newTransaction);
       router.replace('/');

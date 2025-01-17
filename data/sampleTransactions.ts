@@ -34,6 +34,7 @@ const generateRandomTransaction = (id: number): Transaction => {
     amount,
     date,
     notes,
+    synced: false,
   };
 };
 

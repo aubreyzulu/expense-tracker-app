@@ -42,23 +42,26 @@ export default function TransactionHistoryScreen(): JSX.Element {
             />
           )}
           right={() => (
-            <View style={styles.amountContainer}>
-              <Text
-                style={[
-                  styles.amount,
-                  {
-                    color:
-                      item.type === 'income'
-                        ? theme.colors.primary
-                        : theme.colors.error,
-                  },
-                ]}
-              >
-                ${item.amount.toFixed(2)}
-              </Text>
-              <Text style={styles.date}>
-                {new Date(item.date).toLocaleDateString()}
-              </Text>
+            <View style={styles.rowContainer}>
+              <View style={styles.amountContainer}>
+                <Text
+                  style={[
+                    styles.amount,
+                    {
+                      color:
+                        item.type === 'income'
+                          ? theme.colors.primary
+                          : theme.colors.error,
+                    },
+                  ]}
+                >
+                  ${item.amount.toFixed(2)}
+                </Text>
+                <Text style={styles.date}>
+                  {new Date(item.date).toLocaleDateString()}
+                </Text>
+              </View>
+              <Text style={styles.syncStatus}>{item.synced ? '✅' : '🔄'}</Text>
             </View>
           )}
         />
@@ -136,5 +139,13 @@ const styles = StyleSheet.create({
   date: {
     fontSize: 12,
     color: '#666',
+  },
+  syncStatus: {
+    fontSize: 18,
+    marginLeft: 8,
+  },
+  rowContainer: {
+    flexDirection: 'row',
+    gap: 2,
   },
 });
