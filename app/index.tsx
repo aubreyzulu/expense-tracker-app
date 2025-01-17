@@ -14,38 +14,6 @@ export default function HomeScreen(): JSX.Element {
   const { transactions } = useTransactions();
   const theme = useTheme();
 
-  useEffect(() => {
-    const handleNotification = (payload: NotificationPayload) => {
-      switch (payload.type) {
-        case 'sync-success':
-          Toast.show({
-            type: 'success',
-            text1: 'Sync Completed',
-            text2: payload.message,
-          });
-          break;
-        case 'sync-failure':
-          Toast.show({
-            type: 'error',
-            text1: 'Sync Failed',
-            text2: payload.message,
-          });
-          break;
-        case 'sync-progress':
-          // Optionally handle progress notifications
-          break;
-        default:
-          break;
-      }
-    };
-
-    notificationService.on('notify', handleNotification);
-
-    return () => {
-      notificationService.off('notify', handleNotification);
-    };
-  }, []);
-
   const totalIncome = transactions
     .filter((t) => t.type === 'income')
     .reduce((sum, t) => sum + t.amount, 0);
