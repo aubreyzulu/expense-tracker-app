@@ -32,11 +32,18 @@ The **Offline Expense Tracker** is a mobile application that enables users to tr
 
 ## Screenshots
 
-1. **Dashboard**  
-   ![Dashboard](assets/images/dashboard.png 'Dashboard Screen')
-2. **Transactions**  
-   ![Transactions](assets/images/transactions.png 'Transactions Screen')
-3. **Add Transaction**  
-   ![Add Transaction](assets/images/add_transaction.png 'Add Transaction Screen')
-4. **Analytics**  
-   ![Analytics](assets/images/analytics.png 'Analytics Screen')
+## Dashboard
+
+<img src="assets/images/dashboard.png" alt="Dashboard" width="600" />
+
+## Transactions
+
+<img src="assets/images/transactions.png" alt="Transactions" width="600" />
+
+## Add Transaction
+
+<img src="assets/images/add_transaction.png" alt="Add Transaction" width="600" />
+
+## Analytics
+
+<img src="assets/images/analytics.png" alt="Analytics" width="600" />
