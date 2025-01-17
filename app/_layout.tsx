@@ -5,6 +5,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { TransactionProvider } from '../context/TransactionContext';
 import Toast from 'react-native-toast-message';
 
+type RouteName = 'index' | 'add' | 'history' | 'charts';
+
+interface IconMapping {
+  focused: keyof typeof Ionicons.glyphMap;
+  unfocused: keyof typeof Ionicons.glyphMap;
+}
+
 const theme = {
   ...MD3LightTheme,
   colors: {
@@ -15,6 +22,25 @@ const theme = {
   },
 };
 
+const ICONS: Record<RouteName, IconMapping> = {
+  index: {
+    focused: 'home',
+    unfocused: 'home-outline',
+  },
+  add: {
+    focused: 'add-circle',
+    unfocused: 'add-circle-outline',
+  },
+  history: {
+    focused: 'list',
+    unfocused: 'list-outline',
+  },
+  charts: {
+    focused: 'pie-chart',
+    unfocused: 'pie-chart-outline',
+  },
+};
+
 export default function AppLayout() {
   return (
     <PaperProvider theme={theme}>
@@ -22,19 +48,13 @@ export default function AppLayout() {
         <Tabs
           screenOptions={({ route }) => ({
             tabBarIcon: ({ focused, color, size }) => {
-              let iconName: keyof typeof Ionicons.glyphMap;
-
-              if (route.name === 'index') {
-                iconName = focused ? 'home' : 'home-outline';
-              } else if (route.name === 'add') {
-                iconName = focused ? 'add-circle' : 'add-circle-outline';
-              } else if (route.name === 'history') {
-                iconName = focused ? 'list' : 'list-outline';
-              } else if (route.name === 'charts') {
-                iconName = focused ? 'pie-chart' : 'pie-chart-outline';
-              } else {
-                iconName = 'help-outline';
-              }
+              const routeName = route.name as RouteName;
+              const icons = ICONS[routeName];
+              const iconName = icons
+                ? focused
+                  ? icons.focused
+                  : icons.unfocused
+                : 'help-outline';
 
               return <Ionicons name={iconName} size={size} color={color} />;
             },

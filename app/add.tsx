@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StyleSheet, ScrollView } from 'react-native';
 import {
   TextInput,
@@ -10,7 +10,7 @@ import {
 } from 'react-native-paper';
 import { useTransactions } from '../context/TransactionContext';
 import Animated, { FadeInUp } from 'react-native-reanimated';
-import { router } from 'expo-router';
+import { router, usePathname } from 'expo-router';
 import { transactionCategories } from '../data/sampleTransactions';
 
 export default function AddTransactionScreen(): JSX.Element {
@@ -19,7 +19,7 @@ export default function AddTransactionScreen(): JSX.Element {
   const [notes, setNotes] = useState('');
   const [type, setType] = useState<'expense' | 'income'>('expense');
   const [menuVisible, setMenuVisible] = useState(false);
-
+  const pathname = usePathname();
   const { addTransaction } = useTransactions();
   const theme = useTheme();
 
@@ -33,10 +33,20 @@ export default function AddTransactionScreen(): JSX.Element {
         notes,
         synced: false,
       };
+
       addTransaction(newTransaction);
       router.replace('/');
     }
   };
+
+  useEffect(() => {
+    if (pathname === '/add') {
+      setAmount('');
+      setCategory('');
+      setNotes('');
+      setType('expense');
+    }
+  }, [pathname]);
 
   return (
     <ScrollView style={styles.container}>
