@@ -29,3 +29,14 @@ The **Offline Expense Tracker** is a mobile application that enables users to tr
 - **Scalability**: Support increasing numbers of transactions.
 - **Cross-Platform**: Seamless operation on both iOS and Android.
 - **User-Friendly Interface**: Simplified UI for adding, editing, and visualizing transactions.
+
+## Screenshots
+
+1. **Dashboard**  
+   ![Dashboard](assets/images/dashboard.png 'Dashboard Screen')
+2. **Transactions**  
+   ![Transactions](assets/images/transactions.png 'Transactions Screen')
+3. **Add Transaction**  
+   ![Add Transaction](assets/images/add_transaction.png 'Add Transaction Screen')
+4. **Analytics**  
+   ![Analytics](assets/images/analytics.png 'Analytics Screen')
