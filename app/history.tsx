@@ -4,6 +4,7 @@ import { List, Text, Searchbar, Chip, useTheme } from 'react-native-paper';
 import { useTransactions } from '../context/TransactionContext';
 import { Transaction } from '../types';
 import Animated, { FadeInUp } from 'react-native-reanimated';
+import { HistoryItem } from '@/components/HistoryItem';
 
 export default function TransactionHistoryScreen(): JSX.Element {
   const { transactions } = useTransactions();
@@ -25,46 +26,7 @@ export default function TransactionHistoryScreen(): JSX.Element {
   const renderItem = useCallback(
     ({ item, index }: { item: Transaction; index: number }) => (
       <Animated.View entering={FadeInUp.delay(index * 100).duration(500)}>
-        <List.Item
-          title={item.category}
-          description={item.notes}
-          left={(props) => (
-            <List.Icon
-              {...props}
-              icon={
-                item.type === 'income' ? 'arrow-up-circle' : 'arrow-down-circle'
-              }
-              color={
-                item.type === 'income'
-                  ? theme.colors.primary
-                  : theme.colors.error
-              }
-            />
-          )}
-          right={() => (
-            <View style={styles.rowContainer}>
-              <View style={styles.amountContainer}>
-                <Text
-                  style={[
-                    styles.amount,
-                    {
-                      color:
-                        item.type === 'income'
-                          ? theme.colors.primary
-                          : theme.colors.error,
-                    },
-                  ]}
-                >
-                  ${item.amount.toFixed(2)}
-                </Text>
-                <Text style={styles.date}>
-                  {new Date(item.date).toLocaleDateString()}
-                </Text>
-              </View>
-              <Text style={styles.syncStatus}>{item.synced ? '✅' : '🔄'}</Text>
-            </View>
-          )}
-        />
+        <HistoryItem index={index} item={item} />
       </Animated.View>
     ),
     [theme.colors.primary, theme.colors.error]

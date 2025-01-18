@@ -4,11 +4,9 @@ import { Text, Card, useTheme, Button } from 'react-native-paper';
 import { useTransactions } from '../context/TransactionContext';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInUp } from 'react-native-reanimated';
-import Toast from 'react-native-toast-message';
-import notificationService, {
-  NotificationPayload,
-} from '../utils/notification';
+
 import { router } from 'expo-router';
+import { TransactionItem } from '@/components/TransactionItem';
 
 export default function HomeScreen(): JSX.Element {
   const { transactions } = useTransactions();
@@ -95,42 +93,7 @@ export default function HomeScreen(): JSX.Element {
           <Card.Title title="Recent Transactions" />
           <Card.Content>
             {recentTransactions.map((transaction) => (
-              <View key={transaction.id} style={styles.transactionItem}>
-                <Ionicons
-                  name={
-                    transaction.type === 'income'
-                      ? 'arrow-up-circle'
-                      : 'arrow-down-circle'
-                  }
-                  size={24}
-                  color={
-                    transaction.type === 'income'
-                      ? theme.colors.primary
-                      : theme.colors.error
-                  }
-                />
-                <View style={styles.transactionDetails}>
-                  <Text style={styles.transactionCategory}>
-                    {transaction.category}
-                  </Text>
-                  <Text style={styles.transactionDate}>
-                    {new Date(transaction.date).toLocaleDateString()}
-                  </Text>
-                </View>
-                <Text
-                  style={[
-                    styles.transactionAmount,
-                    {
-                      color:
-                        transaction.type === 'income'
-                          ? theme.colors.primary
-                          : theme.colors.error,
-                    },
-                  ]}
-                >
-                  ${transaction.amount.toFixed(2)}
-                </Text>
-              </View>
+              <TransactionItem key={transaction.id} transaction={transaction} />
             ))}
           </Card.Content>
           <Card.Actions>
@@ -183,26 +146,5 @@ const styles = StyleSheet.create({
   recentTransactionsCard: {
     marginBottom: 16,
     elevation: 4,
-  },
-  transactionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  transactionDetails: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  transactionCategory: {
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  transactionDate: {
-    fontSize: 12,
-    color: '#666',
-  },
-  transactionAmount: {
-    fontSize: 16,
-    fontWeight: '500',
   },
 });
