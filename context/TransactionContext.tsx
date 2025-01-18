@@ -41,6 +41,7 @@ export const TransactionProvider: React.FC<TransactionProviderProps> = ({
   useEffect(() => {
     loadTransactions();
     const unsubscribe = NetInfo.addEventListener((state) => {
+      console.log(state.isConnected);
       if (state.isConnected) {
         syncTransactions();
       }
@@ -260,6 +261,7 @@ export const TransactionProvider: React.FC<TransactionProviderProps> = ({
   const syncTransactions = async (): Promise<void> => {
     if (isSyncing) return; // Prevent multiple syncs at the same time
     setIsSyncing(true);
+    console.log('sync', isSyncing);
     try {
       const netState = await NetInfo.fetch();
       if (!netState.isConnected) {
@@ -366,7 +368,9 @@ export const TransactionProvider: React.FC<TransactionProviderProps> = ({
     new Promise((resolve) => setTimeout(resolve, ms));
 
   return (
-    <TransactionContext.Provider value={{ transactions, addTransaction }}>
+    <TransactionContext.Provider
+      value={{ transactions, addTransaction, syncTransactions }}
+    >
       {children}
     </TransactionContext.Provider>
   );

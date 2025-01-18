@@ -23,7 +23,7 @@ export default function AddTransactionScreen(): JSX.Element {
   const { addTransaction } = useTransactions();
   const theme = useTheme();
 
-  const handleAddTransaction = () => {
+  const handleAddTransaction = async () => {
     if (amount && category) {
       const newTransaction = {
         amount: parseFloat(amount),
@@ -34,7 +34,8 @@ export default function AddTransactionScreen(): JSX.Element {
         synced: false,
       };
 
-      addTransaction(newTransaction);
+      await addTransaction(newTransaction);
+
       router.replace('/');
     }
   };

@@ -11,6 +11,6 @@
     "**/*.tsx",
     ".expo/types/**/*.ts",
     "expo-env.d.ts",
-    "screens/AddTransactionScreen.js"
+    "screens/AddTransactionScreen.tsx"
   ]
 }
