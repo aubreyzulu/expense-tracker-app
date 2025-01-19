@@ -13,5 +13,4 @@ export interface TransactionContextType {
   addTransaction: (
     transaction: Omit<Transaction, 'id' | 'synced'>
   ) => Promise<void>;
-  syncTransactions: () => Promise<void>;
 }

@@ -1,10 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
 import {
-  addDoc,
   collection,
+  doc,
   getDocs,
   query,
+  setDoc,
   Timestamp,
   where,
 } from 'firebase/firestore';
@@ -58,7 +59,7 @@ export const TransactionProvider: React.FC<TransactionProviderProps> = ({
     const unsubscribe = NetInfo.addEventListener((state) => {
       console.log(state.isConnected);
       if (state.isConnected && !loading) {
-        syncTransactions();
+        syncAllTransactions();
       }
     });
 
@@ -74,7 +75,6 @@ export const TransactionProvider: React.FC<TransactionProviderProps> = ({
     try {
       const storedTransactions = await AsyncStorage.getItem('transactions');
 
-      // console.log('store', storedTransactions);
       if (storedTransactions) {
         setTransactions(() => JSON.parse(storedTransactions));
       } else {
@@ -108,29 +108,28 @@ export const TransactionProvider: React.FC<TransactionProviderProps> = ({
     newTransaction: Omit<Transaction, 'id' | 'synced'>
   ): Promise<void> => {
     try {
-      console.log('1. Starting addTransaction');
       const transactionWithId: Transaction = {
         ...newTransaction,
         id: uuidv4(),
         synced: false,
       };
-      // console.log('2. Created transaction:', transactionWithId);
+
       const updatedTransactions = [...transactions, transactionWithId];
-      // console.log('3. Current transactions state:', transactions);
-      // console.log('4. Updated transactions array:', updatedTransactions);
 
       await AsyncStorage.setItem(
         'transactions',
         JSON.stringify(updatedTransactions)
       );
-      // console.log('5. Saved to AsyncStorage');
 
-      setTransactions(() => updatedTransactions);
-      console.log('6. Updated state with setTransactions');
+      setTransactions((prevTransactions) => [
+        ...prevTransactions,
+        transactionWithId,
+      ]);
+
       /**
        * Attempt to sync after adding
        */
-      await syncTransactions();
+      await syncSingleTransaction(transactionWithId);
     } catch (error) {
       console.error('Error adding transaction:', error);
       Toast.show({
@@ -146,24 +145,6 @@ export const TransactionProvider: React.FC<TransactionProviderProps> = ({
    */
   const getUnsyncedTransactions = (): Transaction[] => {
     return transactions.filter((tx) => !tx.synced);
-  };
-
-  /**
-   * Mark transactions as synced
-   */
-  const markTransactionsAsSynced = async (ids: string[]): Promise<void> => {
-    try {
-      const updatedTransactions = transactions.map((tx) =>
-        ids.includes(tx.id) ? { ...tx, synced: true } : tx
-      );
-      setTransactions(updatedTransactions);
-      await AsyncStorage.setItem(
-        'transactions',
-        JSON.stringify(updatedTransactions)
-      );
-    } catch (error) {
-      console.error('Error marking transactions as synced:', error);
-    }
   };
 
   /**
@@ -204,34 +185,12 @@ export const TransactionProvider: React.FC<TransactionProviderProps> = ({
   };
 
   /**
-   * Upload unsynced transactions to the server
-   */
-  const uploadTransactions = async (
-    unsyncedTransactions: Transaction[]
-  ): Promise<void> => {
-    try {
-      const transactionsRef = collection(db, 'transactions');
-
-      for (const transaction of unsyncedTransactions) {
-        const { id, synced, ...transactionData } = transaction;
-        await addDoc(transactionsRef, {
-          ...transactionData,
-          timestamp: Timestamp.fromDate(new Date(transaction.date)),
-        });
-      }
-    } catch (error) {
-      console.error('Error uploading transactions:', error);
-      throw error;
-    }
-  };
-
-  /**
    * Get the last synchronization timestamp
    */
   const getLastSyncTime = async (): Promise<string> => {
     try {
       const lastSync = await AsyncStorage.getItem('lastSyncTime');
-      return lastSync || new Date(0).toISOString(); // Default to epoch start
+      return lastSync || new Date(0).toISOString();
     } catch (error) {
       console.error('Error getting last sync time:', error);
       return new Date(0).toISOString();
@@ -252,24 +211,149 @@ export const TransactionProvider: React.FC<TransactionProviderProps> = ({
   /**
    * Merge server transactions into local transactions
    */
-  const mergeTransactions = async (
-    serverTransactions: Transaction[]
-  ): Promise<Transaction[]> => {
+  const mergeTransactions = async (serverTransactions: Transaction[]) => {
     try {
-      const localTransactionsMap = new Map<string, Transaction>();
-      transactions.forEach((tx) => localTransactionsMap.set(tx.id, tx));
-
-      const mergedTransactions = [...transactions];
+      const localTransactionsMap = new Map(
+        transactions.map((tx) => [tx.id, tx])
+      );
 
       serverTransactions.forEach((serverTx) => {
         if (!localTransactionsMap.has(serverTx.id)) {
-          mergedTransactions.push({ ...serverTx, synced: true });
+          transactions.push({ ...serverTx, synced: true });
         }
       });
 
-      return mergedTransactions;
+      return transactions;
     } catch (error) {
       console.error('Error merging transactions:', error);
+      throw error;
+    }
+  };
+  /**
+   * Sync a single transaction with the server
+   */
+  const syncSingleTransaction = async (
+    transaction: Transaction
+  ): Promise<void> => {
+    if (isSyncing) {
+      console.log('Currently syncing. Queuing transaction for later sync.');
+      return;
+    }
+
+    setIsSyncing(true);
+    console.log('Starting sync for transaction:', transaction.id);
+
+    try {
+      const netState = await NetInfo.fetch();
+      if (!netState.isConnected) {
+        console.log(
+          'No internet connection. Transaction will sync when online.'
+        );
+        Toast.show({
+          type: 'info',
+          text1: 'Offline Mode',
+          text2: 'Using local data. Will sync when online.',
+        });
+        return;
+      }
+
+      /**
+       *  Attempt to sync the single transaction
+       */
+      await attemptSyncTransaction(transaction);
+    } catch (error) {
+      console.error('Sync failed for transaction:', transaction.id, error);
+      Toast.show({
+        type: 'error',
+        text1: 'Sync Failed',
+        text2: 'Will retry when online.',
+      });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+  /**
+   * Attempt to sync a single transaction with retry logic
+   */
+  const attemptSyncTransaction = async (
+    transaction: Transaction
+  ): Promise<void> => {
+    const MAX_RETRIES = 5;
+    let attempt = 0;
+    let success = false;
+    let delay = 1000;
+
+    while (attempt < MAX_RETRIES && !success) {
+      try {
+        await uploadTransaction(transaction);
+        await markTransactionAsSynced(transaction.id);
+        success = true;
+        Toast.show({
+          type: 'success',
+          text1: 'Upload Successful',
+          text2: `Transaction ${transaction.id} synced.`,
+        });
+      } catch (error) {
+        attempt += 1;
+        console.warn(
+          `Retrying upload for transaction ${transaction.id} (Attempt ${attempt})`
+        );
+        if (attempt < MAX_RETRIES) {
+          await sleep(delay);
+          delay *= 2;
+        } else {
+          console.error(
+            `Failed to upload transaction ${transaction.id} after ${MAX_RETRIES} attempts`
+          );
+          Toast.show({
+            type: 'error',
+            text1: 'Sync Error',
+            text2: `Failed to sync transaction ${transaction.id}.`,
+          });
+        }
+      }
+    }
+  };
+
+  /**
+   * Mark a single transaction as synced
+   */
+  const markTransactionAsSynced = async (id: string): Promise<void> => {
+    try {
+      setTransactions((prevTransactions) => {
+        const updatedTransactions = prevTransactions.map((tx) =>
+          tx.id === id ? { ...tx, synced: true } : tx
+        );
+        AsyncStorage.setItem(
+          'transactions',
+          JSON.stringify(updatedTransactions)
+        ).catch((error) => {
+          console.error('Error saving to AsyncStorage:', error);
+        });
+        return updatedTransactions;
+      });
+    } catch (error) {
+      console.error('Error marking transaction as synced:', error);
+    }
+  };
+
+  /**
+   * Upload a single transaction to Firestore
+   */
+  const uploadTransaction = async (transaction: Transaction): Promise<void> => {
+    try {
+      const transactionRef = doc(db, 'transactions', transaction.id);
+      await setDoc(transactionRef, {
+        amount: transaction.amount,
+        category: transaction.category,
+        date: transaction.date,
+        notes: transaction.notes,
+        type: transaction.type,
+        timestamp: Timestamp.fromDate(new Date(transaction.date)),
+      });
+      console.log('Uploaded transaction to Firestore:', transaction.id);
+    } catch (error) {
+      console.error('Error uploading transaction:', error);
       throw error;
     }
   };
@@ -277,10 +361,17 @@ export const TransactionProvider: React.FC<TransactionProviderProps> = ({
   /**
    * Synchronize transactions with the server
    */
-  const syncTransactions = async (): Promise<void> => {
-    if (isSyncing) return;
+  /**
+   * Sync all unsynced transactions with the server
+   */
+  const syncAllTransactions = async (): Promise<void> => {
+    if (isSyncing) {
+      console.log('Currently syncing. Please wait.');
+      return;
+    }
+
     setIsSyncing(true);
-    console.log('Starting sync process...');
+    console.log('Starting bulk sync process...');
 
     try {
       const netState = await NetInfo.fetch();
@@ -294,10 +385,7 @@ export const TransactionProvider: React.FC<TransactionProviderProps> = ({
         return;
       }
 
-      // Get unsynced transactions
       const unsyncedTransactions = getUnsyncedTransactions();
-      // console.log('unsynced', unsyncedTransactions);
-      // console.log('state', transactions);
       console.log(`Found ${unsyncedTransactions.length} unsynced transactions`);
 
       if (unsyncedTransactions.length > 0) {
@@ -307,88 +395,17 @@ export const TransactionProvider: React.FC<TransactionProviderProps> = ({
           text2: `Uploading ${unsyncedTransactions.length} transactions...`,
         });
 
-        // Upload with retry logic
-        const MAX_RETRIES = 5;
-        let attempt = 0;
-        let success = false;
-        let delay = 1000;
-
-        while (attempt < MAX_RETRIES && !success) {
-          try {
-            await uploadTransactions(unsyncedTransactions);
-            // console.log('uploaded', unsyncedTransactions);
-            await markTransactionsAsSynced(
-              unsyncedTransactions.map((tx) => tx.id)
-            );
-
-            // Update AsyncStorage after successful sync
-            const updatedTransactions = transactions.map((tx) =>
-              unsyncedTransactions.find((unsynced) => unsynced.id === tx.id)
-                ? { ...tx, synced: true }
-                : tx
-            );
-            await AsyncStorage.setItem(
-              'transactions',
-              JSON.stringify(updatedTransactions)
-            );
-            setTransactions(updatedTransactions);
-
-            success = true;
-            Toast.show({
-              type: 'success',
-              text1: 'Upload Successful',
-              text2: `${unsyncedTransactions.length} transactions synced.`,
-            });
-          } catch (error) {
-            attempt += 1;
-            if (attempt < MAX_RETRIES) {
-              await sleep(delay);
-              delay *= 2;
-            } else {
-              throw error;
-            }
-          }
+        for (const transaction of unsyncedTransactions) {
+          await attemptSyncTransaction(transaction);
         }
       }
 
-      // Fetch and merge server transactions
-      try {
-        const lastSyncTime = await getLastSyncTime();
-        const serverTransactions = await fetchServerTransactions(lastSyncTime);
-
-        if (serverTransactions.length > 0) {
-          // Merge with local transactions
-          const mergedTransactions = await mergeTransactions(
-            serverTransactions
-          );
-
-          // Update AsyncStorage with merged data
-          await AsyncStorage.setItem(
-            'transactions',
-            JSON.stringify(mergedTransactions)
-          );
-          setTransactions(mergedTransactions);
-
-          // Update last sync time
-          const newSyncTime = new Date().toISOString();
-          await updateLastSyncTime(newSyncTime);
-
-          Toast.show({
-            type: 'success',
-            text1: 'Sync Complete',
-            text2: `Updated with ${serverTransactions.length} new transactions.`,
-          });
-        }
-      } catch (error) {
-        console.error('Error during server sync:', error);
-        Toast.show({
-          type: 'error',
-          text1: 'Sync Error',
-          text2: 'Failed to sync with server. Local data preserved.',
-        });
-      }
+      /**
+       * After uploading, fetch and merge server transactions
+       */
+      await fetchAndMergeServerTransactions();
     } catch (error) {
-      console.error('Sync process failed:', error);
+      console.error('Bulk sync process failed:', error);
       Toast.show({
         type: 'error',
         text1: 'Sync Failed',
@@ -400,15 +417,49 @@ export const TransactionProvider: React.FC<TransactionProviderProps> = ({
   };
 
   /**
+   * Fetch and merge server transactions
+   */
+  const fetchAndMergeServerTransactions = async (): Promise<void> => {
+    try {
+      const lastSyncTime = await getLastSyncTime();
+      const serverTransactions = await fetchServerTransactions(lastSyncTime);
+
+      if (serverTransactions.length > 0) {
+        /**
+         * Merge with local transactions
+         */
+        await mergeTransactions(serverTransactions);
+
+        /**
+         *  Update last sync time
+         */
+        const newSyncTime = new Date().toISOString();
+        await updateLastSyncTime(newSyncTime);
+
+        Toast.show({
+          type: 'success',
+          text1: 'Sync Complete',
+          text2: `Updated with ${serverTransactions.length} new transactions.`,
+        });
+      }
+    } catch (error) {
+      console.error('Error during server sync:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Sync Error',
+        text2: 'Failed to sync with server. Local data preserved.',
+      });
+    }
+  };
+
+  /**
    * Utility function to pause execution for a given time
    */
   const sleep = (ms: number) =>
     new Promise((resolve) => setTimeout(resolve, ms));
 
   return (
-    <TransactionContext.Provider
-      value={{ transactions, addTransaction, syncTransactions }}
-    >
+    <TransactionContext.Provider value={{ transactions, addTransaction }}>
       {children}
     </TransactionContext.Provider>
   );
