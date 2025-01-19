@@ -1,9 +1,9 @@
-import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import { Text, useTheme } from 'react-native-paper';
+import React from "react";
+import { View, StyleSheet } from "react-native";
+import { Text, useTheme } from "react-native-paper";
 
-import { Ionicons } from '@expo/vector-icons';
-import { Transaction } from '@/types';
+import { Ionicons } from "@expo/vector-icons";
+import type { Transaction } from "../types";
 
 interface TransactionItemProps {
   transaction: Transaction;
@@ -15,13 +15,13 @@ export const TransactionItem = ({ transaction }: TransactionItemProps) => {
     <View key={transaction.id} style={styles.transactionItem}>
       <Ionicons
         name={
-          transaction.type === 'income'
-            ? 'arrow-up-circle'
-            : 'arrow-down-circle'
+          transaction.type === "income"
+            ? "arrow-up-circle"
+            : "arrow-down-circle"
         }
         size={24}
         color={
-          transaction.type === 'income'
+          transaction.type === "income"
             ? theme.colors.primary
             : theme.colors.error
         }
@@ -37,7 +37,7 @@ export const TransactionItem = ({ transaction }: TransactionItemProps) => {
           styles.transactionAmount,
           {
             color:
-              transaction.type === 'income'
+              transaction.type === "income"
                 ? theme.colors.primary
                 : theme.colors.error,
           },
@@ -51,8 +51,8 @@ export const TransactionItem = ({ transaction }: TransactionItemProps) => {
 
 const styles = StyleSheet.create({
   transactionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 12,
   },
   transactionDetails: {
@@ -61,14 +61,14 @@ const styles = StyleSheet.create({
   },
   transactionCategory: {
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   transactionDate: {
     fontSize: 12,
-    color: '#666',
+    color: "#666",
   },
   transactionAmount: {
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: "500",
   },
 });

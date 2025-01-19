@@ -6,7 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 
 import { router } from 'expo-router';
-import { TransactionItem } from '@/components/TransactionItem';
+import { TransactionItem } from '../components/TransactionItem';
 
 export default function HomeScreen(): JSX.Element {
   const { transactions } = useTransactions();
