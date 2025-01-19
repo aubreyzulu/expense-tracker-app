@@ -12,105 +12,151 @@ import { useTransactions } from '../context/TransactionContext';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { router, usePathname } from 'expo-router';
 import { transactionCategories } from '../data/sampleTransactions';
+import { useForm, Controller } from 'react-hook-form';
 
 export default function AddTransactionScreen(): JSX.Element {
-  const [amount, setAmount] = useState('');
-  const [category, setCategory] = useState('');
-  const [notes, setNotes] = useState('');
-  const [type, setType] = useState<'expense' | 'income'>('expense');
   const [menuVisible, setMenuVisible] = useState(false);
   const pathname = usePathname();
   const { addTransaction } = useTransactions();
   const theme = useTheme();
 
-  const handleAddTransaction = async () => {
-    if (amount && category) {
+  const {
+    control,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm({
+    defaultValues: {
+      amount: '',
+      category: '',
+      notes: '',
+      type: 'expense',
+    },
+  });
+
+  const onSubmit = async (data: any) => {
+    if (data.amount && data.category) {
       const newTransaction = {
-        amount: parseFloat(amount),
-        category,
-        type,
+        amount: parseFloat(data.amount),
+        category: data.category,
+        type: data.type,
         date: new Date().toISOString(),
-        notes,
+        notes: data.notes,
         synced: false,
       };
 
       await addTransaction(newTransaction);
-
+      reset();
       router.replace('/');
     }
   };
 
   useEffect(() => {
     if (pathname === '/add') {
-      setAmount('');
-      setCategory('');
-      setNotes('');
-      setType('expense');
+      reset();
     }
-  }, [pathname]);
+  }, [pathname, reset]);
 
   return (
     <ScrollView style={styles.container}>
       <Animated.View entering={FadeInUp.delay(200).duration(1000)}>
         <Text style={styles.title}>Add New Transaction</Text>
-        <SegmentedButtons
-          value={type}
-          onValueChange={(value) => setType(value as 'expense' | 'income')}
-          buttons={[
-            { value: 'expense', label: 'Expense' },
-            { value: 'income', label: 'Income' },
-          ]}
-          style={styles.segmentedButtons}
+        <Controller
+          control={control}
+          name="type"
+          render={({ field: { onChange, value } }) => (
+            <SegmentedButtons
+              value={value}
+              onValueChange={(val) => onChange(val)}
+              buttons={[
+                { value: 'expense', label: 'Expense' },
+                { value: 'income', label: 'Income' },
+              ]}
+              style={styles.segmentedButtons}
+            />
+          )}
         />
-        <TextInput
-          label="Amount"
-          value={amount}
-          onChangeText={setAmount}
-          keyboardType="numeric"
-          style={styles.input}
-          mode="outlined"
-        />
-        <Menu
-          visible={menuVisible}
-          onDismiss={() => setMenuVisible(false)}
-          anchor={
+        <Controller
+          control={control}
+          name="amount"
+          rules={{ required: 'Amount is required' }}
+          render={({ field: { onChange, value } }) => (
             <TextInput
-              label="Category"
-              value={category}
-              onFocus={() => setMenuVisible(true)}
+              label="Amount"
+              value={value}
+              onChangeText={onChange}
+              keyboardType="numeric"
               style={styles.input}
               mode="outlined"
-              right={
-                <TextInput.Icon
-                  icon="menu-down"
-                  onPress={() => setMenuVisible(true)}
-                />
-              }
+              error={!!errors.amount}
             />
-          }
-        >
-          {transactionCategories.map((cat) => (
-            <Menu.Item
-              key={cat}
-              onPress={() => {
-                setCategory(cat);
-                setMenuVisible(false);
-              }}
-              title={cat}
+          )}
+        />
+        {errors.amount && (
+          <Text style={styles.errorText}>{errors.amount.message}</Text>
+        )}
+
+        <Controller
+          control={control}
+          name="category"
+          rules={{ required: 'Category is required' }}
+          render={({ field: { onChange, value } }) => (
+            <>
+              <Menu
+                visible={menuVisible}
+                onDismiss={() => setMenuVisible(false)}
+                anchor={
+                  <TextInput
+                    label="Category"
+                    value={value}
+                    onFocus={() => setMenuVisible(true)}
+                    style={styles.input}
+                    mode="outlined"
+                    error={!!errors.category}
+                    right={
+                      <TextInput.Icon
+                        icon="menu-down"
+                        onPress={() => setMenuVisible(true)}
+                      />
+                    }
+                  />
+                }
+              >
+                {transactionCategories.map((cat) => (
+                  <Menu.Item
+                    key={cat}
+                    onPress={() => {
+                      onChange(cat);
+                      setMenuVisible(false);
+                    }}
+                    title={cat}
+                  />
+                ))}
+              </Menu>
+              {errors.category && (
+                <Text style={styles.errorText}>{errors.category.message}</Text>
+              )}
+            </>
+          )}
+        />
+
+        <Controller
+          control={control}
+          name="notes"
+          render={({ field: { onChange, value } }) => (
+            <TextInput
+              label="Notes"
+              value={value}
+              onChangeText={onChange}
+              multiline
+              style={styles.input}
+              mode="outlined"
             />
-          ))}
-        </Menu>
-        <TextInput
-          label="Notes"
-          value={notes}
-          onChangeText={setNotes}
-          multiline
-          style={styles.input}
-          mode="outlined"
+          )}
         />
         <Button
           mode="contained"
-          onPress={handleAddTransaction}
+          onPress={handleSubmit(onSubmit)}
           style={styles.button}
           labelStyle={styles.buttonLabel}
         >
@@ -145,5 +191,10 @@ const styles = StyleSheet.create({
   },
   buttonLabel: {
     fontSize: 16,
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 12,
+    marginBottom: 8,
   },
 });

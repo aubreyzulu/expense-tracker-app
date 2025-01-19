@@ -1,12 +1,19 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import NetInfo from '@react-native-community/netinfo';
-import { addDoc, collection, getDocs, query, Timestamp, where } from 'firebase/firestore';
+import {
+  addDoc,
+  collection,
+  getDocs,
+  query,
+  Timestamp,
+  where,
+} from 'firebase/firestore';
 import React, {
   createContext,
   ReactNode,
   useContext,
   useEffect,
-  useState
+  useState,
 } from 'react';
 import 'react-native-get-random-values';
 import Toast from 'react-native-toast-message';
@@ -38,12 +45,19 @@ export const TransactionProvider: React.FC<TransactionProviderProps> = ({
 }) => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadTransactions();
+    const initialize = async () => {
+      await loadTransactions();
+      setLoading(false);
+    };
+
+    initialize();
+
     const unsubscribe = NetInfo.addEventListener((state) => {
       console.log(state.isConnected);
-      if (state.isConnected) {
+      if (state.isConnected && !loading) {
         syncTransactions();
       }
     });
@@ -51,7 +65,7 @@ export const TransactionProvider: React.FC<TransactionProviderProps> = ({
     return () => {
       unsubscribe();
     };
-  }, []);
+  }, [loading]);
 
   /**
    * Load transactions from AsyncStorage or initialize with sample data
@@ -59,8 +73,10 @@ export const TransactionProvider: React.FC<TransactionProviderProps> = ({
   const loadTransactions = async (): Promise<void> => {
     try {
       const storedTransactions = await AsyncStorage.getItem('transactions');
+
+      // console.log('store', storedTransactions);
       if (storedTransactions) {
-        setTransactions(JSON.parse(storedTransactions));
+        setTransactions(() => JSON.parse(storedTransactions));
       } else {
         /**
          * Use sample data if no stored transactions
@@ -92,26 +108,29 @@ export const TransactionProvider: React.FC<TransactionProviderProps> = ({
     newTransaction: Omit<Transaction, 'id' | 'synced'>
   ): Promise<void> => {
     try {
+      console.log('1. Starting addTransaction');
       const transactionWithId: Transaction = {
         ...newTransaction,
         id: uuidv4(),
         synced: false,
       };
+      // console.log('2. Created transaction:', transactionWithId);
       const updatedTransactions = [...transactions, transactionWithId];
-      setTransactions(updatedTransactions);
+      // console.log('3. Current transactions state:', transactions);
+      // console.log('4. Updated transactions array:', updatedTransactions);
+
       await AsyncStorage.setItem(
         'transactions',
         JSON.stringify(updatedTransactions)
       );
-      Toast.show({
-        type: 'success',
-        text1: 'Success',
-        text2: 'Transaction added.',
-      });
+      // console.log('5. Saved to AsyncStorage');
+
+      setTransactions(() => updatedTransactions);
+      console.log('6. Updated state with setTransactions');
       /**
        * Attempt to sync after adding
        */
-      syncTransactions();
+      await syncTransactions();
     } catch (error) {
       console.error('Error adding transaction:', error);
       Toast.show({
@@ -150,17 +169,19 @@ export const TransactionProvider: React.FC<TransactionProviderProps> = ({
   /**
    * Fetch new transactions from the server
    */
-  const fetchServerTransactions = async (lastSyncTime: string): Promise<Transaction[]> => {
+  const fetchServerTransactions = async (
+    lastSyncTime: string
+  ): Promise<Transaction[]> => {
     try {
       const transactionsRef = collection(db, 'transactions');
       const q = query(
         transactionsRef,
         where('timestamp', '>', Timestamp.fromDate(new Date(lastSyncTime)))
       );
-      
+
       const querySnapshot = await getDocs(q);
       const serverTransactions: Transaction[] = [];
-      
+
       querySnapshot.forEach((doc) => {
         const data = doc.data() as Transaction;
 
@@ -174,7 +195,7 @@ export const TransactionProvider: React.FC<TransactionProviderProps> = ({
           synced: true,
         });
       });
-      
+
       return serverTransactions;
     } catch (error) {
       console.error('Error fetching server transactions:', error);
@@ -185,15 +206,17 @@ export const TransactionProvider: React.FC<TransactionProviderProps> = ({
   /**
    * Upload unsynced transactions to the server
    */
-  const uploadTransactions = async (unsyncedTransactions: Transaction[]): Promise<void> => {
+  const uploadTransactions = async (
+    unsyncedTransactions: Transaction[]
+  ): Promise<void> => {
     try {
       const transactionsRef = collection(db, 'transactions');
-      
+
       for (const transaction of unsyncedTransactions) {
         const { id, synced, ...transactionData } = transaction;
         await addDoc(transactionsRef, {
           ...transactionData,
-          timestamp: Timestamp.fromDate(new Date(transaction.date))
+          timestamp: Timestamp.fromDate(new Date(transaction.date)),
         });
       }
     } catch (error) {
@@ -229,14 +252,16 @@ export const TransactionProvider: React.FC<TransactionProviderProps> = ({
   /**
    * Merge server transactions into local transactions
    */
-  const mergeTransactions = async (serverTransactions: Transaction[]): Promise<Transaction[]> => {
+  const mergeTransactions = async (
+    serverTransactions: Transaction[]
+  ): Promise<Transaction[]> => {
     try {
       const localTransactionsMap = new Map<string, Transaction>();
-      transactions.forEach(tx => localTransactionsMap.set(tx.id, tx));
+      transactions.forEach((tx) => localTransactionsMap.set(tx.id, tx));
 
       const mergedTransactions = [...transactions];
-      
-      serverTransactions.forEach(serverTx => {
+
+      serverTransactions.forEach((serverTx) => {
         if (!localTransactionsMap.has(serverTx.id)) {
           mergedTransactions.push({ ...serverTx, synced: true });
         }
@@ -271,6 +296,8 @@ export const TransactionProvider: React.FC<TransactionProviderProps> = ({
 
       // Get unsynced transactions
       const unsyncedTransactions = getUnsyncedTransactions();
+      // console.log('unsynced', unsyncedTransactions);
+      // console.log('state', transactions);
       console.log(`Found ${unsyncedTransactions.length} unsynced transactions`);
 
       if (unsyncedTransactions.length > 0) {
@@ -289,17 +316,23 @@ export const TransactionProvider: React.FC<TransactionProviderProps> = ({
         while (attempt < MAX_RETRIES && !success) {
           try {
             await uploadTransactions(unsyncedTransactions);
-            await markTransactionsAsSynced(unsyncedTransactions.map(tx => tx.id));
-            
+            // console.log('uploaded', unsyncedTransactions);
+            await markTransactionsAsSynced(
+              unsyncedTransactions.map((tx) => tx.id)
+            );
+
             // Update AsyncStorage after successful sync
-            const updatedTransactions = transactions.map(tx => 
-              unsyncedTransactions.find(unsynced => unsynced.id === tx.id)
+            const updatedTransactions = transactions.map((tx) =>
+              unsyncedTransactions.find((unsynced) => unsynced.id === tx.id)
                 ? { ...tx, synced: true }
                 : tx
             );
-            await AsyncStorage.setItem('transactions', JSON.stringify(updatedTransactions));
+            await AsyncStorage.setItem(
+              'transactions',
+              JSON.stringify(updatedTransactions)
+            );
             setTransactions(updatedTransactions);
-            
+
             success = true;
             Toast.show({
               type: 'success',
@@ -322,19 +355,24 @@ export const TransactionProvider: React.FC<TransactionProviderProps> = ({
       try {
         const lastSyncTime = await getLastSyncTime();
         const serverTransactions = await fetchServerTransactions(lastSyncTime);
-        
+
         if (serverTransactions.length > 0) {
           // Merge with local transactions
-          const mergedTransactions = await mergeTransactions(serverTransactions);
-          
+          const mergedTransactions = await mergeTransactions(
+            serverTransactions
+          );
+
           // Update AsyncStorage with merged data
-          await AsyncStorage.setItem('transactions', JSON.stringify(mergedTransactions));
+          await AsyncStorage.setItem(
+            'transactions',
+            JSON.stringify(mergedTransactions)
+          );
           setTransactions(mergedTransactions);
-          
+
           // Update last sync time
           const newSyncTime = new Date().toISOString();
           await updateLastSyncTime(newSyncTime);
-          
+
           Toast.show({
             type: 'success',
             text1: 'Sync Complete',
