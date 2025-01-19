@@ -41,7 +41,7 @@ export const HistoryItem: React.FC<HistoryItemProps> = ({ item, index }) => {
                 },
               ]}
             >
-              ZMW {item.amount.toFixed(2)}
+              ${item.amount.toFixed(2)}
             </Text>
             <Text style={styles.date}>
               {new Date(item.date).toLocaleDateString()}
