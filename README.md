@@ -49,3 +49,30 @@ The **Offline Expense Tracker** is a mobile application that enables users to tr
 <img src="assets/images/analytics.png" alt="Analytics" width="300" />
 
 <img src="assets/images/analytics2.png" alt="Analytics" width="300" />
+
+# Firebase Configuration Setup
+
+## Instructions
+
+### 1. Obtain Firebase Configuration
+
+- Go to the [Firebase Console](https://console.firebase.google.com/).
+- Select your Firebase project.
+- Navigate to **Project Settings** > **General** tab.
+- Scroll down to the "Your apps" section.
+- Click on your app (or add a new one) to see the Firebase configuration details.
+- Copy the following values:
+  - `apiKey`
+  - `authDomain`
+  - `projectId`
+  - `storageBucket`
+  - `messagingSenderId`
+  - `appId`
+
+### 2. Copy the Sample `.env` File
+
+- Locate the `.env.sample` file in the root of the project.
+- Copy the file and rename it to `.env`:
+  ```bash
+  cp .env.sample .env
+  ```
